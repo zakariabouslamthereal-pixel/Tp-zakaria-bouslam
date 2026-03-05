@@ -1,0 +1,2002 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TP1 — Peroxydase | Simulation Interactive</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e14;
+    --surface: #111827;
+    --card: #1a2332;
+    --border: #2a3a52;
+    --accent: #00d4aa;
+    --accent2: #ff6b35;
+    --accent3: #7c63f5;
+    --yellow: #ffd166;
+    --text: #e8f0fe;
+    --muted: #6b7a99;
+    --enzyme: #ff6b35;
+    --substrate: #00d4aa;
+    --product: #ffd166;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,170,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,170,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .header {
+    position: relative;
+    z-index: 1;
+    padding: 40px 40px 20px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(0,212,170,0.05) 0%, transparent 100%);
+  }
+
+  .header-badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+    letter-spacing: 2px;
+  }
+
+  .header h1 {
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 800;
+    line-height: 1.1;
+    background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .header p {
+    color: var(--muted);
+    font-size: 15px;
+    margin-top: 8px;
+    font-weight: 400;
+  }
+
+  /* Navigation tabs */
+  .nav-tabs {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 4px;
+    padding: 20px 40px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+
+  .nav-tab {
+    padding: 10px 24px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .nav-tab:hover { color: var(--text); border-color: var(--accent); }
+  .nav-tab.active {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+
+  /* Main layout */
+  .main {
+    position: relative;
+    z-index: 1;
+    padding: 30px 40px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+
+  .card.accent2::before { background: linear-gradient(90deg, var(--accent2), transparent); }
+  .card.accent3::before { background: linear-gradient(90deg, var(--accent3), transparent); }
+  .card.yellow::before { background: linear-gradient(90deg, var(--yellow), transparent); }
+
+  .card-title {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .card.accent2 .card-title { color: var(--accent2); }
+  .card.accent3 .card-title { color: var(--accent3); }
+  .card.yellow .card-title { color: var(--yellow); }
+
+  /* Reaction equation */
+  .equation-box {
+    background: rgba(0,212,170,0.06);
+    border: 1px solid rgba(0,212,170,0.2);
+    border-radius: 12px;
+    padding: 20px 28px;
+    text-align: center;
+    margin: 20px 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .equation-box .enzyme-label {
+    font-size: 11px;
+    color: var(--accent2);
+    margin-bottom: 4px;
+    letter-spacing: 2px;
+  }
+
+  .equation {
+    font-size: 18px;
+    color: var(--text);
+  }
+
+  .eq-h2o2 { color: #60a5fa; }
+  .eq-gaiacol { color: var(--accent); }
+  .eq-h2o { color: #34d399; }
+  .eq-product { color: var(--yellow); }
+  .eq-arrow { color: var(--muted); }
+
+  /* Cuvette simulation */
+  .cuvette-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .cuvette-wrapper {
+    position: relative;
+    width: 90px;
+    height: 160px;
+  }
+
+  .cuvette {
+    width: 80px;
+    height: 140px;
+    border: 3px solid #4a6fa5;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    position: absolute;
+    bottom: 0; left: 5px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.03);
+  }
+
+  .cuvette-liquid {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    transition: height 0.5s ease, background-color 0.5s ease;
+    border-radius: 0 0 5px 5px;
+  }
+
+  .cuvette-top {
+    width: 90px;
+    height: 12px;
+    background: #4a6fa5;
+    border-radius: 4px 4px 0 0;
+    position: absolute;
+    top: 0;
+  }
+
+  /* Spectrophotometer display */
+  .spectro {
+    background: #0d1a12;
+    border: 2px solid #1a3a2a;
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    position: relative;
+  }
+
+  .spectro-screen {
+    background: #001a0d;
+    border: 1px solid #0a5a2a;
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 12px;
+  }
+
+  .do-value {
+    font-size: 52px;
+    font-weight: 600;
+    color: #00ff88;
+    text-shadow: 0 0 20px rgba(0,255,136,0.5);
+    line-height: 1;
+  }
+
+  .do-label {
+    font-size: 11px;
+    color: #00aa55;
+    letter-spacing: 3px;
+    margin-top: 4px;
+  }
+
+  .wavelength-badge {
+    display: inline-block;
+    background: rgba(255,107,53,0.2);
+    color: var(--accent2);
+    border: 1px solid var(--accent2);
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 8px;
+  }
+
+  /* Chart */
+  .chart-container {
+    position: relative;
+    padding: 10px 0;
+  }
+
+  canvas {
+    border-radius: 8px;
+    width: 100% !important;
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .btn {
+    padding: 14px 28px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  .btn-primary:hover { background: #00f0c0; transform: translateY(-1px); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+
+  .btn-secondary:hover { background: rgba(0,212,170,0.1); }
+
+  .btn-danger {
+    background: rgba(255,107,53,0.15);
+    color: var(--accent2);
+    border: 1px solid var(--accent2);
+  }
+
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+
+  /* Progress / Timeline */
+  .timeline {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 16px 0;
+  }
+
+  .time-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    transition: all 0.3s;
+  }
+
+  .time-dot.recorded {
+    border-color: var(--accent);
+    background: rgba(0,212,170,0.15);
+    color: var(--accent);
+  }
+
+  .time-dot.current {
+    border-color: var(--yellow);
+    background: rgba(255,209,102,0.2);
+    color: var(--yellow);
+    animation: pulse 1s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,209,102,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(255,209,102,0); }
+  }
+
+  /* Results table */
+  .results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    margin-top: 16px;
+  }
+
+  .results-table th {
+    background: rgba(0,212,170,0.1);
+    color: var(--accent);
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 11px;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .results-table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    color: var(--text);
+  }
+
+  .results-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* Info boxes */
+  .info-box {
+    border-radius: 10px;
+    padding: 16px;
+    margin: 12px 0;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .info-box.tip {
+    background: rgba(0,212,170,0.08);
+    border-left: 3px solid var(--accent);
+    color: var(--text);
+  }
+
+  .info-box.warning {
+    background: rgba(255,209,102,0.08);
+    border-left: 3px solid var(--yellow);
+    color: var(--text);
+  }
+
+  .info-box.danger {
+    background: rgba(255,107,53,0.08);
+    border-left: 3px solid var(--accent2);
+  }
+
+  .info-box strong { color: var(--accent); }
+  .info-box.warning strong { color: var(--yellow); }
+  .info-box.danger strong { color: var(--accent2); }
+
+  /* Step indicator */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 16px 0;
+  }
+
+  .step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    transition: all 0.2s;
+  }
+
+  .step.active {
+    background: rgba(0,212,170,0.06);
+    border-color: rgba(0,212,170,0.3);
+  }
+
+  .step.done {
+    background: rgba(0,212,170,0.03);
+    border-color: rgba(0,212,170,0.15);
+    opacity: 0.7;
+  }
+
+  .step-num {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .step.active .step-num {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+
+  .step.done .step-num {
+    background: rgba(0,212,170,0.3);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .step-text { font-size: 13px; line-height: 1.5; color: var(--muted); }
+  .step.active .step-text { color: var(--text); }
+
+  /* pH selector */
+  .ph-selector {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 16px 0;
+  }
+
+  .ph-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    border: 2px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .ph-btn span { font-size: 9px; font-family: 'JetBrains Mono', monospace; }
+
+  .ph-btn:hover { border-color: var(--accent); color: var(--text); }
+  .ph-btn.selected {
+    border-color: var(--accent);
+    background: rgba(0,212,170,0.15);
+    color: var(--accent);
+  }
+
+  /* Color swatch */
+  .color-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+
+  /* Stat boxes */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 16px 0;
+  }
+
+  .stat-box {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+  }
+
+  .stat-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .stat-lbl {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* Timer */
+  .timer-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 40px;
+    font-weight: 600;
+    color: var(--yellow);
+    text-align: center;
+    padding: 16px;
+    background: rgba(255,209,102,0.05);
+    border: 1px solid rgba(255,209,102,0.2);
+    border-radius: 12px;
+    margin: 12px 0;
+    letter-spacing: 4px;
+  }
+
+  /* Section title */
+  .section-title {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+
+  .section-subtitle {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 28px;
+    font-weight: 400;
+  }
+
+  /* Tube row */
+  .tubes-row {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+
+  .tube-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tube-label {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .tube-label.active { color: var(--accent); }
+
+  /* pH bar chart */
+  .ph-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    height: 200px;
+    padding: 0 10px;
+    border-bottom: 2px solid var(--border);
+    border-left: 2px solid var(--border);
+    margin-top: 20px;
+  }
+
+  .ph-bar-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+
+  .ph-bar {
+    width: 100%;
+    max-width: 60px;
+    border-radius: 4px 4px 0 0;
+    transition: height 1s cubic-bezier(0.34,1.56,0.64,1);
+    position: relative;
+    min-height: 2px;
+  }
+
+  .ph-bar-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text);
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+
+  .ph-bar-lbl {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* Michaelis-Menten viz */
+  .km-vmax-display {
+    display: flex;
+    gap: 16px;
+    margin: 20px 0;
+  }
+
+  .km-box {
+    flex: 1;
+    padding: 16px;
+    border-radius: 10px;
+    text-align: center;
+  }
+
+  .km-box.km { background: rgba(124,99,245,0.1); border: 1px solid rgba(124,99,245,0.3); }
+  .km-box.vmax { background: rgba(255,107,53,0.1); border: 1px solid rgba(255,107,53,0.3); }
+
+  .km-box .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 600;
+  }
+
+  .km-box.km .val { color: var(--accent3); }
+  .km-box.vmax .val { color: var(--accent2); }
+
+  .km-box .lbl {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 1px;
+  }
+
+  /* Molecule animation */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-6px); }
+  }
+
+  .floating { animation: float 3s ease-in-out infinite; }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .main { padding: 20px 16px; }
+    .header { padding: 24px 16px 16px; }
+    .nav-tabs { padding: 12px 16px; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .grid-3 { grid-template-columns: 1fr; }
+  }
+
+  /* Concept tags */
+  .tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    margin: 3px;
+  }
+
+  .tag.green { background: rgba(0,212,170,0.15); color: var(--accent); border: 1px solid rgba(0,212,170,0.3); }
+  .tag.orange { background: rgba(255,107,53,0.15); color: var(--accent2); border: 1px solid rgba(255,107,53,0.3); }
+  .tag.purple { background: rgba(124,99,245,0.15); color: var(--accent3); border: 1px solid rgba(124,99,245,0.3); }
+  .tag.yellow { background: rgba(255,209,102,0.15); color: var(--yellow); border: 1px solid rgba(255,209,102,0.3); }
+
+  .separator {
+    height: 1px;
+    background: var(--border);
+    margin: 24px 0;
+  }
+
+  .full-width { grid-column: 1 / -1; }
+
+  /* Animation for DO reading */
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .blinking { animation: blink 1s infinite; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-badge">GB / S4 — BIOCHIMIE MÉTABOLIQUE</div>
+  <h1>TP1 : Peroxydase<br>Simulation Interactive</h1>
+  <p>Étude de la cinétique enzymatique • Extraction du navet • Spectrophotométrie à 470 nm</p>
+</header>
+
+<nav class="nav-tabs">
+  <button class="nav-tab active" onclick="switchTab('intro')">📚 Introduction</button>
+  <button class="nav-tab" onclick="switchTab('extraction')">🧪 Extraction</button>
+  <button class="nav-tab" onclick="switchTab('temoins')">⚗️ Témoins</button>
+  <button class="nav-tab" onclick="switchTab('cinetique')">⏱️ Cinétique (Partie 1)</button>
+  <button class="nav-tab" onclick="switchTab('ph')">🔬 Effet pH (Partie 2)</button>
+  <button class="nav-tab" onclick="switchTab('resultats')">📊 Résultats & Analyse</button>
+</nav>
+
+<main class="main">
+
+  <!-- ===== INTRO ===== -->
+  <section id="intro" class="section active">
+    <div class="section-title">La Peroxydase 🧬</div>
+    <div class="section-subtitle">Tout comprendre avant de commencer le TP</div>
+
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <div class="card-title">⚗️ Qu'est-ce qu'une enzyme ?</div>
+          <p style="font-size:14px; line-height:1.7; color:var(--muted)">
+            Les enzymes sont des <strong style="color:var(--accent)">catalyseurs biologiques</strong> — elles accélèrent des réactions chimiques spécifiques <em>sans être consommées</em> par la réaction. Elles sont régénérées à la fin.
+          </p>
+          <div class="equation-box">
+            <div class="enzyme-label">MÉCANISME MICHAELIEN</div>
+            <div class="equation" style="font-size:15px">
+              <span style="color:#60a5fa">E</span> + <span style="color:var(--accent)">S</span>
+              <span class="eq-arrow"> ⇌ </span>
+              <span style="color:var(--yellow)">ES</span>
+              <span class="eq-arrow"> → </span>
+              <span style="color:#f472b6">P</span> + <span style="color:#60a5fa">E</span>
+            </div>
+          </div>
+          <div style="font-size:12px; color:var(--muted); margin-top:8px">
+            <span class="tag green">E = Enzyme</span>
+            <span class="tag orange">S = Substrat</span>
+            <span class="tag yellow">ES = Complexe</span>
+            <span class="tag purple">P = Produit</span>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:20px">
+          <div class="card-title">🧬 La Peroxydase — structure</div>
+          <p style="font-size:13px; line-height:1.7; color:var(--muted)">
+            • <strong style="color:var(--text)">Hémoprotéine</strong> — contient du fer (Fe³⁺)<br>
+            • Groupement prosthétique : <strong style="color:var(--accent)">Protohématine IX</strong> (porphyrine)<br>
+            • Poids moléculaire : <strong style="color:var(--text)">30 000 – 50 000 Da</strong><br>
+            • Source : extraite du <strong style="color:var(--yellow)">navet</strong> 🥕<br>
+            • Rôle biologique : <strong style="color:var(--accent2)">détruire les peroxydes toxiques</strong>
+          </p>
+        </div>
+      </div>
+
+      <div>
+        <div class="card accent2">
+          <div class="card-title">🔬 Réaction catalysée</div>
+          <div class="equation-box" style="background:rgba(255,107,53,0.06); border-color:rgba(255,107,53,0.2)">
+            <div class="enzyme-label" style="color:var(--accent2)">PEROXYDASE (470 nm)</div>
+            <div class="equation">
+              <span class="eq-h2o2">H₂O₂</span> + <span class="eq-gaiacol">RH₂</span>
+              <span class="eq-arrow"> ──▶ </span>
+              <span class="eq-h2o">2H₂O</span> + <span class="eq-product">R</span>
+            </div>
+          </div>
+          <div class="info-box tip" style="margin-top:12px">
+            <strong>💡 Principe de détection</strong><br>
+            Le <strong>gaïacol (RH₂)</strong> est incolore. Quand il est oxydé par la peroxydase, il devient <strong>brun-orangé</strong>. On mesure cette coloration à <strong>470 nm</strong> au spectrophotomètre.
+          </div>
+          <div class="info-box warning">
+            <strong>⚠️ Dans notre TP :</strong><br>
+            Substrats utilisés : <strong>Gaïacol 6mM</strong> + <strong>H₂O₂ (0,08%)</strong>
+          </div>
+        </div>
+
+        <div class="card yellow" style="margin-top:20px">
+          <div class="card-title">📊 Ce qu'on va mesurer</div>
+          <div class="steps">
+            <div class="step active">
+              <div class="step-num">1</div>
+              <div class="step-text"><strong style="color:var(--text)">Cinétique en fonction du temps</strong> — DO toutes les 30 secondes pendant 10 min</div>
+            </div>
+            <div class="step active">
+              <div class="step-num">2</div>
+              <div class="step-text"><strong style="color:var(--text)">Effet du pH</strong> — Tester pH 4, 5, 6, 7 et 8 → trouver le pH optimum</div>
+            </div>
+          </div>
+          <div style="margin-top:8px; font-size:13px; color:var(--muted)">
+            La <strong style="color:var(--yellow)">variation de DO = mesure directe de l'activité enzymatique</strong> (plus DO augmente vite = enzyme plus active)
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== EXTRACTION ===== -->
+  <section id="extraction" class="section">
+    <div class="section-title">Extraction de l'enzyme 🥕</div>
+    <div class="section-subtitle">Protocole étape par étape — Préparer la solution enzymatique à partir du navet</div>
+
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <div class="card-title">📋 Protocole d'extraction</div>
+          <div id="extraction-steps" class="steps">
+            <div class="step" id="ex-step-1">
+              <div class="step-num">1</div>
+              <div class="step-text">Peser <strong style="color:var(--text)">8g de navet</strong> sur balance de précision</div>
+            </div>
+            <div class="step" id="ex-step-2">
+              <div class="step-num">2</div>
+              <div class="step-text">Ajouter <strong style="color:var(--text)">40 ml d'eau distillée</strong> → <strong style="color:var(--accent)">Broyer</strong> soigneusement</div>
+            </div>
+            <div class="step" id="ex-step-3">
+              <div class="step-num">3</div>
+              <div class="step-text"><strong style="color:var(--text)">Filtrer</strong> sur papier Whatman pour enlever les débris</div>
+            </div>
+            <div class="step" id="ex-step-4">
+              <div class="step-num">4</div>
+              <div class="step-text"><strong style="color:var(--text)">Centrifuger</strong> le filtrat à <strong style="color:var(--yellow)">7500 g pendant 5 min</strong></div>
+            </div>
+            <div class="step" id="ex-step-5">
+              <div class="step-num">5</div>
+              <div class="step-text">Récupérer le <strong style="color:var(--accent)">surnageant</strong> (partie liquide du dessus)</div>
+            </div>
+            <div class="step" id="ex-step-6">
+              <div class="step-num">6</div>
+              <div class="step-text">Diluer <strong style="color:var(--text)">de moitié</strong> dans l'eau distillée → <strong style="color:var(--accent)">Solution enzymatique ✓</strong></div>
+            </div>
+          </div>
+          <div style="margin-top:16px; display:flex; gap:10px">
+            <button class="btn btn-primary" onclick="runExtraction()">▶ Simuler l'extraction</button>
+            <button class="btn btn-secondary" onclick="resetExtraction()">↺ Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card accent3">
+          <div class="card-title">🎬 Visualisation</div>
+          <div style="display:flex; justify-content:space-around; align-items:center; padding:20px 0; flex-wrap:wrap; gap:20px">
+
+            <!-- Navet -->
+            <div style="text-align:center">
+              <div style="font-size:48px" class="floating">🥕</div>
+              <div style="font-size:11px; color:var(--muted); margin-top:4px">8g navet</div>
+            </div>
+
+            <div style="font-size:20px; color:var(--border)">→</div>
+
+            <!-- Centrifuge -->
+            <div style="text-align:center">
+              <div id="centrifuge-icon" style="font-size:40px">🔬</div>
+              <div style="font-size:11px; color:var(--muted); margin-top:4px">Centrifuge</div>
+              <div style="font-size:10px; color:var(--muted)">7500g / 5min</div>
+            </div>
+
+            <div style="font-size:20px; color:var(--border)">→</div>
+
+            <!-- Tube centrifuge -->
+            <div style="text-align:center" id="tube-result">
+              <div style="position:relative; width:40px; height:80px; margin:0 auto">
+                <div style="width:40px; height:70px; border:2px solid #4a6fa5; border-top:none; border-radius:0 0 20px 20px; overflow:hidden; position:absolute; bottom:0">
+                  <div id="pellet" style="position:absolute; bottom:0; width:100%; height:0; background:linear-gradient(to top, #8b4513, #a0522d); transition:height 1s"></div>
+                  <div id="surnageant-visual" style="position:absolute; bottom:0; width:100%; height:0; background:rgba(255,220,180,0.6); transition:height 1s; transition-delay:0.5s"></div>
+                </div>
+                <div style="width:44px; height:8px; background:#4a6fa5; border-radius:3px 3px 0 0; position:absolute; top:0; left:-2px"></div>
+              </div>
+              <div style="font-size:11px; color:var(--muted); margin-top:4px">Après centri.</div>
+            </div>
+
+            <div style="font-size:20px; color:var(--border)">→</div>
+
+            <!-- Solution finale -->
+            <div style="text-align:center">
+              <div class="cuvette-wrapper" style="width:50px; height:90px">
+                <div class="cuvette-top" style="width:54px"></div>
+                <div class="cuvette" style="width:50px; height:80px; left:0">
+                  <div id="enzyme-solution" style="height:0; width:100%; background:rgba(255,220,180,0.5); position:absolute; bottom:0; transition:height 1.5s ease 1s"></div>
+                </div>
+              </div>
+              <div style="font-size:11px; color:var(--accent); margin-top:4px; font-weight:600">Sol. enzymatique</div>
+            </div>
+
+          </div>
+
+          <div id="extraction-status" class="info-box tip" style="margin-top:16px; display:none">
+            <strong>✅ Extraction terminée !</strong><br>
+            La solution enzymatique est prête. Elle contient la peroxydase extraite du navet, diluée de moitié dans l'eau distillée.
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:20px">
+          <div class="card-title">💡 Pourquoi centrifuger ?</div>
+          <p style="font-size:13px; line-height:1.7; color:var(--muted)">
+            La centrifugation sépare les composants par densité :<br>
+            • <strong style="color:var(--accent2)">Culot (bas)</strong> = débris cellulaires, fibres<br>
+            • <strong style="color:var(--accent)">Surnageant (haut)</strong> = solution protéique avec l'enzyme<br><br>
+            On récupère uniquement le <strong style="color:var(--text)">surnageant</strong> qui contient la peroxydase !
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== TEMOINS ===== -->
+  <section id="temoins" class="section">
+    <div class="section-title">Les Témoins ⚗️</div>
+    <div class="section-subtitle">3 témoins indispensables pour valider l'expérience</div>
+
+    <div class="info-box tip">
+      <strong>Pourquoi des témoins ?</strong> Les témoins permettent de vérifier que la coloration observée est bien due à l'activité enzymatique et non à une réaction spontanée. Le Témoin A sert à régler le zéro du spectrophotomètre.
+    </div>
+
+    <div class="grid-3" style="margin-top:20px">
+
+      <div class="card">
+        <div class="card-title">Témoin A — Zéro Spectro</div>
+        <div class="tubes-row" style="justify-content:center">
+          <div class="tube-item">
+            <div class="cuvette-wrapper">
+              <div class="cuvette-top"></div>
+              <div class="cuvette">
+                <div style="height:80%; width:100%; position:absolute; bottom:0">
+                  <div style="height:46%; background:rgba(200,200,255,0.2); width:100%"></div>
+                  <div style="height:33%; background:rgba(150,220,150,0.3); width:100%"></div>
+                  <div style="height:21%; background:rgba(100,180,255,0.4); width:100%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="tube-label" style="font-size:10px; max-width:80px">Légèrement coloré</div>
+          </div>
+        </div>
+        <div style="margin-top:12px; font-size:13px; line-height:1.6; color:var(--muted)">
+          <div style="margin-bottom:6px"><span class="tag green">1,9 ml</span> Tampon phosphate pH 6</div>
+          <div style="margin-bottom:6px"><span class="tag orange">1 ml</span> Gaïacol 6mM</div>
+          <div style="margin-bottom:6px"><span class="tag purple">0,1 ml</span> H₂O₂ (0,08%)</div>
+          <div style="margin-top:10px; font-size:12px; color:var(--accent2)">❌ Pas d'enzyme</div>
+        </div>
+        <div class="info-box danger" style="margin-top:12px">
+          <strong>Rôle :</strong> Sert à <strong>régler le zéro</strong> du spectrophotomètre. La DO de référence = 0.
+        </div>
+      </div>
+
+      <div class="card accent2">
+        <div class="card-title">Témoin B — Sans Gaïacol</div>
+        <div class="tubes-row" style="justify-content:center">
+          <div class="tube-item">
+            <div class="cuvette-wrapper">
+              <div class="cuvette-top"></div>
+              <div class="cuvette">
+                <div style="height:85%; width:100%; position:absolute; bottom:0">
+                  <div style="height:55%; background:rgba(200,200,255,0.15); width:100%"></div>
+                  <div style="height:10%; background:rgba(255,200,150,0.3); width:100%"></div>
+                  <div style="height:20%; background:rgba(100,180,255,0.3); width:100%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="tube-label" style="font-size:10px">Incolore</div>
+          </div>
+        </div>
+        <div style="margin-top:12px; font-size:13px; line-height:1.6; color:var(--muted)">
+          <div style="margin-bottom:6px"><span class="tag green">2,8 ml</span> Tampon phosphate pH 6</div>
+          <div style="margin-bottom:6px"><span class="tag yellow">0,1 ml</span> Solution enzymatique</div>
+          <div style="margin-bottom:6px"><span class="tag purple">0,1 ml</span> H₂O₂ (0,08%)</div>
+          <div style="margin-top:10px; font-size:12px; color:var(--accent2)">❌ Pas de gaïacol</div>
+        </div>
+        <div class="info-box warning" style="margin-top:12px">
+          <strong>Rôle :</strong> Vérifie que l'enzyme seule ne donne pas de couleur sans substrat.
+        </div>
+      </div>
+
+      <div class="card accent3">
+        <div class="card-title">Témoin C — Sans H₂O₂</div>
+        <div class="tubes-row" style="justify-content:center">
+          <div class="tube-item">
+            <div class="cuvette-wrapper">
+              <div class="cuvette-top"></div>
+              <div class="cuvette">
+                <div style="height:85%; width:100%; position:absolute; bottom:0">
+                  <div style="height:46%; background:rgba(200,200,255,0.15); width:100%"></div>
+                  <div style="height:28%; background:rgba(150,220,150,0.25); width:100%"></div>
+                  <div style="height:11%; background:rgba(255,200,150,0.25); width:100%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="tube-label" style="font-size:10px">Pas de réaction</div>
+          </div>
+        </div>
+        <div style="margin-top:12px; font-size:13px; line-height:1.6; color:var(--muted)">
+          <div style="margin-bottom:6px"><span class="tag green">1,9 ml</span> Tampon phosphate pH 6</div>
+          <div style="margin-bottom:6px"><span class="tag orange">1 ml</span> Gaïacol 6mM</div>
+          <div style="margin-bottom:6px"><span class="tag yellow">0,1 ml</span> Solution enzymatique</div>
+          <div style="margin-top:10px; font-size:12px; color:var(--accent2)">❌ Pas de H₂O₂</div>
+        </div>
+        <div class="info-box tip" style="margin-top:12px; background:rgba(124,99,245,0.08); border-color:var(--accent3)">
+          <strong style="color:var(--accent3)">Rôle :</strong> Confirme que H₂O₂ est indispensable pour déclencher la réaction.
+        </div>
+      </div>
+    </div>
+
+    <div class="card full-width" style="margin-top:20px">
+      <div class="card-title">⚠️ Règle importante</div>
+      <div style="display:flex; gap:24px; flex-wrap:wrap">
+        <div class="info-box warning" style="flex:1; min-width:250px; margin:0">
+          <strong>H₂O₂ TOUJOURS EN DERNIER</strong><br>
+          Le peroxyde d'hydrogène <strong>déclenche immédiatement</strong> la réaction. Il faut l'ajouter en dernier puis introduire rapidement la cuve dans le spectrophotomètre.
+        </div>
+        <div class="info-box tip" style="flex:1; min-width:250px; margin:0">
+          <strong>Commencer par les témoins</strong><br>
+          Toujours préparer et lire les témoins en premier. Le Témoin A règle le zéro du spectrophotomètre avant toute mesure.
+        </div>
+        <div class="info-box danger" style="flex:1; min-width:250px; margin:0">
+          <strong style="color:var(--accent2)">λ = 470 nm</strong><br>
+          Toutes les mesures d'absorbance se font à <strong>470 nm</strong>, longueur d'onde d'absorption du gaïacol oxydé (brun-orangé).
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CINÉTIQUE ===== -->
+  <section id="cinetique" class="section">
+    <div class="section-title">Cinétique Enzymatique ⏱️</div>
+    <div class="section-subtitle">Mesure de la DO à 470 nm toutes les 30 secondes pendant 10 minutes</div>
+
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <div class="card-title">🧪 Composition de la cuve (3 ml)</div>
+          <div style="font-size:13px; line-height:1.8; color:var(--muted)">
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border)">
+              <span>Tampon phosphate 0,5M (pH 6,0)</span>
+              <span class="tag green">1,8 ml</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border)">
+              <span>Gaïacol 6 mM</span>
+              <span class="tag orange">1 ml</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border)">
+              <span>Solution enzymatique</span>
+              <span class="tag yellow">0,1 ml</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0">
+              <span>H₂O₂ (0,08%) ← <em style="color:var(--accent2)">en dernier !</em></span>
+              <span class="tag purple">0,1 ml</span>
+            </div>
+          </div>
+
+          <div class="separator"></div>
+
+          <div class="card-title">⏰ Chronomètre</div>
+          <div class="timer-display" id="timer">00:00</div>
+
+          <div style="display:flex; gap:10px; margin-top:12px">
+            <button class="btn btn-primary" id="start-btn" onclick="startKinetics()" style="flex:1">▶ Démarrer</button>
+            <button class="btn btn-danger" id="pause-btn" onclick="pauseKinetics()" disabled style="flex:1">⏸ Pause</button>
+            <button class="btn btn-secondary" onclick="resetKinetics()" style="flex:1">↺ Reset</button>
+          </div>
+
+          <div class="separator"></div>
+
+          <div class="card-title">📍 Points de mesure (30s)</div>
+          <div class="timeline" id="timeline"></div>
+        </div>
+
+        <!-- Cuvette live -->
+        <div class="card accent2" style="margin-top:20px">
+          <div class="card-title">🔬 Cuve en temps réel</div>
+          <div style="display:flex; gap:24px; align-items:center; justify-content:center; padding:10px 0">
+            <div class="cuvette-container">
+              <div class="cuvette-wrapper" style="width:100px; height:180px">
+                <div class="cuvette-top" style="width:104px; left:-2px"></div>
+                <div class="cuvette" style="width:100px; height:160px; left:0">
+                  <div id="live-liquid" class="cuvette-liquid" style="height:75%; background:rgba(150,220,150,0.2)"></div>
+                </div>
+              </div>
+              <div style="font-size:11px; color:var(--muted); margin-top:4px">λ = 470 nm</div>
+            </div>
+
+            <div>
+              <div class="spectro">
+                <div class="spectro-screen">
+                  <div class="do-value" id="live-do">0.000</div>
+                  <div class="do-label">ABSORBANCE (DO)</div>
+                </div>
+                <div class="wavelength-badge">λ = 470 nm</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="card-title">📈 Courbe DO = f(temps)</div>
+          <div class="chart-container">
+            <canvas id="kineticsChart" height="300"></canvas>
+          </div>
+          <div id="kinetics-analysis" style="display:none; margin-top:16px">
+            <div class="stat-grid">
+              <div class="stat-box">
+                <div class="stat-val" id="vi-val">—</div>
+                <div class="stat-lbl">Vi (DO/min)</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-val" id="do-max-val">—</div>
+                <div class="stat-lbl">DO finale</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card yellow" style="margin-top:20px">
+          <div class="card-title">📊 Tableau de mesures</div>
+          <div style="max-height:280px; overflow-y:auto">
+            <table class="results-table" id="kinetics-table">
+              <thead>
+                <tr>
+                  <th>Temps (s)</th>
+                  <th>Temps (min)</th>
+                  <th>DO (470nm)</th>
+                  <th>ΔDO</th>
+                </tr>
+              </thead>
+              <tbody id="kinetics-tbody">
+                <tr><td colspan="4" style="text-align:center; color:var(--muted); padding:20px">Démarrez l'expérience...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px">
+      <div class="card-title">📐 Interprétation de la courbe</div>
+      <div class="grid-3">
+        <div class="info-box tip" style="margin:0">
+          <strong>Phase 1 — Linéaire</strong><br>
+          La DO augmente rapidement de façon linéaire. C'est la <strong>vitesse initiale (Vi)</strong> maximale. Le substrat est en excès.
+        </div>
+        <div class="info-box warning" style="margin:0">
+          <strong>Phase 2 — Ralentissement</strong><br>
+          La vitesse diminue car le <strong>substrat s'épuise</strong>. L'enzyme manque de H₂O₂ ou de gaïacol.
+        </div>
+        <div class="info-box danger" style="margin:0">
+          <strong>Phase 3 — Plateau</strong><br>
+          La réaction s'arrête. <strong>DO maximale</strong> atteinte. Tout le substrat est consommé ou enzyme inactivée.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== pH ===== -->
+  <section id="ph" class="section">
+    <div class="section-title">Effet du pH 🔬</div>
+    <div class="section-subtitle">Tester l'activité enzymatique à différents pH → trouver le pH optimum</div>
+
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <div class="card-title">⚙️ Choisir le pH à tester</div>
+          <p style="font-size:13px; color:var(--muted); margin-bottom:12px">Même protocole que la cinétique, mais on change le tampon phosphate :</p>
+
+          <div class="ph-selector">
+            <button class="ph-btn" onclick="selectPH(4)">4<span>acide</span></button>
+            <button class="ph-btn" onclick="selectPH(5)">5<span>acide</span></button>
+            <button class="ph-btn selected" onclick="selectPH(6)">6<span>opt.</span></button>
+            <button class="ph-btn" onclick="selectPH(7)">7<span>neutre</span></button>
+            <button class="ph-btn" onclick="selectPH(8)">8<span>basique</span></button>
+          </div>
+
+          <div class="info-box tip" id="ph-info">
+            <strong>pH 6 (sélectionné)</strong><br>
+            Zone optimale pour la peroxydase du navet. L'enzyme est bien structurée à ce pH.
+          </div>
+
+          <div class="separator"></div>
+
+          <div class="card-title">🧪 Composition de la cuve</div>
+          <div style="font-size:13px; line-height:1.8; color:var(--muted)">
+            <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border)">
+              <span>Tampon phosphate 0,5M (pH <span id="ph-display" style="color:var(--accent); font-weight:700">6</span>)</span>
+              <span class="tag green">1,8 ml</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border)">
+              <span>Gaïacol 6 mM</span>
+              <span class="tag orange">1 ml</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border)">
+              <span>Solution enzymatique</span>
+              <span class="tag yellow">0,1 ml</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:6px 0">
+              <span>H₂O₂ (0,08%)</span>
+              <span class="tag purple">0,1 ml</span>
+            </div>
+          </div>
+
+          <div style="margin-top:16px; display:flex; gap:10px">
+            <button class="btn btn-primary" onclick="runPHTest()" style="flex:1" id="ph-run-btn">▶ Tester ce pH</button>
+            <button class="btn btn-secondary" onclick="runAllPH()" style="flex:1">▶ Tester tous les pH</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card accent3">
+          <div class="card-title">📊 Activité enzymatique vs pH</div>
+          <div class="ph-bars" id="ph-bars">
+            <div class="ph-bar-wrap">
+              <div class="ph-bar" id="bar-4" style="height:2%; background:linear-gradient(to top, #ff4444, #ff8888); max-width:60px">
+                <span class="ph-bar-val" id="val-4"></span>
+              </div>
+              <div class="ph-bar-lbl">pH 4</div>
+            </div>
+            <div class="ph-bar-wrap">
+              <div class="ph-bar" id="bar-5" style="height:2%; background:linear-gradient(to top, #ff8800, #ffaa44); max-width:60px">
+                <span class="ph-bar-val" id="val-5"></span>
+              </div>
+              <div class="ph-bar-lbl">pH 5</div>
+            </div>
+            <div class="ph-bar-wrap">
+              <div class="ph-bar" id="bar-6" style="height:2%; background:linear-gradient(to top, #00d4aa, #44ffcc); max-width:60px">
+                <span class="ph-bar-val" id="val-6"></span>
+              </div>
+              <div class="ph-bar-lbl">pH 6</div>
+            </div>
+            <div class="ph-bar-wrap">
+              <div class="ph-bar" id="bar-7" style="height:2%; background:linear-gradient(to top, #0088ff, #44aaff); max-width:60px">
+                <span class="ph-bar-val" id="val-7"></span>
+              </div>
+              <div class="ph-bar-lbl">pH 7</div>
+            </div>
+            <div class="ph-bar-wrap">
+              <div class="ph-bar" id="bar-8" style="height:2%; background:linear-gradient(to top, #8844ff, #bb88ff); max-width:60px">
+                <span class="ph-bar-val" id="val-8"></span>
+              </div>
+              <div class="ph-bar-lbl">pH 8</div>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; margin-top:4px; font-size:10px; color:var(--muted); padding:0 10px; font-family:'JetBrains Mono',monospace">
+            <span>0</span><span>ΔDO/3min</span>
+          </div>
+
+          <div id="ph-optimum-box" style="display:none; margin-top:16px" class="info-box tip">
+            <strong>🎯 pH Optimum trouvé !</strong><br>
+            La peroxydase du navet est maximalement active entre <strong>pH 6 et 7</strong>. Aux pH extrêmes (4 et 8), l'enzyme se dénature partiellement.
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:20px">
+          <div class="card-title">💡 Pourquoi le pH affecte l'activité ?</div>
+          <p style="font-size:13px; line-height:1.7; color:var(--muted)">
+            Le pH modifie l'état d'ionisation des <strong style="color:var(--text)">acides aminés du site actif</strong> :<br><br>
+            • <strong style="color:var(--accent2)">pH trop acide (4)</strong> → protonation → site actif déformé → faible activité<br>
+            • <strong style="color:var(--accent)">pH optimum (6-7)</strong> → conformation idéale → activité maximale<br>
+            • <strong style="color:var(--accent3)">pH trop basique (8)</strong> → déprotonation → enzyme dénaturée → faible activité
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card yellow" style="margin-top:20px">
+      <div class="card-title">📋 Tableau récapitulatif des pH</div>
+      <table class="results-table" id="ph-table">
+        <thead>
+          <tr>
+            <th>pH</th>
+            <th>Milieu</th>
+            <th>ΔDO (3 min)</th>
+            <th>Activité relative</th>
+            <th>Observation</th>
+          </tr>
+        </thead>
+        <tbody id="ph-tbody">
+          <tr><td colspan="5" style="text-align:center; color:var(--muted); padding:20px">Lancez les tests de pH...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===== RÉSULTATS ===== -->
+  <section id="resultats" class="section">
+    <div class="section-title">Résultats & Analyse 📊</div>
+    <div class="section-subtitle">Synthèse des données et interprétation scientifique</div>
+
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <div class="card-title">📈 Courbe de cinétique simulée</div>
+          <canvas id="finalChart" height="250"></canvas>
+          <div class="stat-grid" style="margin-top:16px">
+            <div class="stat-box">
+              <div class="stat-val" style="color:var(--accent2)">0.082</div>
+              <div class="stat-lbl">Vi (DO/min)</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-val">0.82</div>
+              <div class="stat-lbl">DO max</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-val" style="color:var(--yellow)">~5 min</div>
+              <div class="stat-lbl">Temps plateau</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-val" style="color:var(--accent3)">pH 6</div>
+              <div class="stat-lbl">pH optimum</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card accent2">
+          <div class="card-title">🎯 Conclusions scientifiques</div>
+          <div class="steps">
+            <div class="step active">
+              <div class="step-num">✓</div>
+              <div class="step-text"><strong style="color:var(--text)">La DO augmente avec le temps</strong> → La peroxydase oxyde le gaïacol (incolore → brun-orangé)</div>
+            </div>
+            <div class="step active">
+              <div class="step-num">✓</div>
+              <div class="step-text"><strong style="color:var(--text)">Courbe sigmoïde</strong> → Phase linéaire (Vi max) puis plateau (substrat épuisé)</div>
+            </div>
+            <div class="step active">
+              <div class="step-num">✓</div>
+              <div class="step-text"><strong style="color:var(--text)">pH optimum entre 6 et 7</strong> → Activité maximale, enzyme bien structurée</div>
+            </div>
+            <div class="step active">
+              <div class="step-num">✓</div>
+              <div class="step-text"><strong style="color:var(--text)">pH extrêmes → dénaturation</strong> → Perte de la structure 3D du site actif</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:20px">
+          <div class="card-title">📐 Formule de la Vitesse Initiale</div>
+          <div class="equation-box">
+            <div class="enzyme-label">CALCUL DE Vi</div>
+            <div class="equation" style="font-size:20px; font-weight:600">
+              Vi = <span style="color:var(--accent)">ΔDO</span> / <span style="color:var(--yellow)">Δt</span>
+            </div>
+          </div>
+          <p style="font-size:13px; color:var(--muted); margin-top:12px; line-height:1.6">
+            On prend les points de la <strong style="color:var(--text)">phase linéaire initiale</strong> (premières 2-3 minutes).<br>
+            Vi s'exprime en <strong style="color:var(--accent)">unités DO/minute</strong>.
+          </p>
+          <div class="info-box tip" style="margin-top:12px">
+            <strong>Exemple de calcul :</strong><br>
+            Si ΔDO = 0,25 entre t=0 et t=3 min<br>
+            → Vi = 0,25 / 3 = <strong>0,083 DO/min</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px">
+      <div class="card-title">📝 Résumé du TP1 à retenir</div>
+      <div class="grid-3">
+        <div>
+          <div style="font-size:13px; color:var(--muted); line-height:1.8">
+            <strong style="color:var(--accent)">Enzyme :</strong> Peroxydase<br>
+            <strong style="color:var(--accent)">Source :</strong> Navet (8g)<br>
+            <strong style="color:var(--accent)">Substrats :</strong> H₂O₂ + Gaïacol<br>
+            <strong style="color:var(--accent)">Produit coloré :</strong> Gaïacol oxydé
+          </div>
+        </div>
+        <div>
+          <div style="font-size:13px; color:var(--muted); line-height:1.8">
+            <strong style="color:var(--yellow)">λ mesure :</strong> 470 nm<br>
+            <strong style="color:var(--yellow)">Durée cinétique :</strong> 10 min<br>
+            <strong style="color:var(--yellow)">Intervalle :</strong> 30 secondes<br>
+            <strong style="color:var(--yellow)">pH testés :</strong> 4, 5, 6, 7, 8
+          </div>
+        </div>
+        <div>
+          <div style="font-size:13px; color:var(--muted); line-height:1.8">
+            <strong style="color:var(--accent2)">pH optimum :</strong> 6 – 7<br>
+            <strong style="color:var(--accent2)">Témoins :</strong> A (zéro), B, C<br>
+            <strong style="color:var(--accent2)">H₂O₂ :</strong> Toujours en DERNIER<br>
+            <strong style="color:var(--accent2)">Vi :</strong> ΔDO/Δt (DO/min)
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ============ NAVIGATION ============
+function switchTab(tab) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(tab).classList.add('active');
+  event.target.classList.add('active');
+
+  if (tab === 'resultats') drawFinalChart();
+}
+
+// ============ EXTRACTION SIMULATION ============
+let extractionStep = 0;
+function runExtraction() {
+  const steps = document.querySelectorAll('#extraction-steps .step');
+  extractionStep = 0;
+
+  function nextStep() {
+    if (extractionStep < steps.length) {
+      steps.forEach(s => s.classList.remove('active'));
+      steps[extractionStep].classList.add('active');
+      for (let i = 0; i < extractionStep; i++) {
+        steps[i].classList.add('done');
+        steps[i].classList.remove('active');
+      }
+
+      // Visual updates
+      if (extractionStep === 3) {
+        document.getElementById('centrifuge-icon').style.animation = 'spin 0.3s linear infinite';
+        setTimeout(() => {
+          document.getElementById('centrifuge-icon').style.animation = '';
+          document.getElementById('pellet').style.height = '25%';
+          document.getElementById('surnageant-visual').style.height = '60%';
+        }, 1500);
+      }
+      if (extractionStep === 5) {
+        document.getElementById('enzyme-solution').style.height = '70%';
+        setTimeout(() => {
+          document.getElementById('extraction-status').style.display = 'block';
+        }, 1600);
+      }
+
+      extractionStep++;
+      setTimeout(nextStep, 900);
+    }
+  }
+  nextStep();
+}
+
+function resetExtraction() {
+  extractionStep = 0;
+  document.querySelectorAll('#extraction-steps .step').forEach(s => {
+    s.classList.remove('active', 'done');
+  });
+  document.getElementById('pellet').style.height = '0';
+  document.getElementById('surnageant-visual').style.height = '0';
+  document.getElementById('enzyme-solution').style.height = '0';
+  document.getElementById('extraction-status').style.display = 'none';
+  document.getElementById('centrifuge-icon').style.animation = '';
+}
+
+// ============ KINETICS SIMULATION ============
+let kineticsInterval = null;
+let kineticsData = { times: [], dos: [] };
+let currentTime = 0;
+let isRunning = false;
+let isPaused = false;
+let realTimer = null;
+let realSeconds = 0;
+
+// Simulated DO values (realistic peroxydase curve)
+const simulatedDO = [
+  0.000, 0.041, 0.082, 0.123, 0.162, 0.198,
+  0.232, 0.263, 0.291, 0.316, 0.338, 0.357,
+  0.373, 0.387, 0.399, 0.409, 0.417, 0.424,
+  0.429, 0.433, 0.437
+];
+
+function initTimeline() {
+  const tl = document.getElementById('timeline');
+  tl.innerHTML = '';
+  for (let i = 0; i <= 20; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'time-dot';
+    dot.textContent = (i * 30) + 's';
+    dot.id = `dot-${i}`;
+    tl.appendChild(dot);
+  }
+}
+
+function startKinetics() {
+  if (isPaused) {
+    isPaused = false;
+    document.getElementById('start-btn').disabled = true;
+    document.getElementById('pause-btn').disabled = false;
+    continueKinetics();
+    return;
+  }
+  if (isRunning) return;
+
+  isRunning = true;
+  isPaused = false;
+  kineticsData = { times: [], dos: [] };
+  currentTime = 0;
+  realSeconds = 0;
+  document.getElementById('kinetics-tbody').innerHTML = '';
+  document.getElementById('start-btn').disabled = true;
+  document.getElementById('pause-btn').disabled = false;
+
+  initTimeline();
+  drawKineticsChart();
+  continueKinetics();
+}
+
+function continueKinetics() {
+  realTimer = setInterval(() => {
+    realSeconds++;
+    const min = String(Math.floor(realSeconds / 60)).padStart(2, '0');
+    const sec = String(realSeconds % 60).padStart(2, '0');
+    document.getElementById('timer').textContent = `${min}:${sec}`;
+
+    if (realSeconds % 3 === 0) { // Every 3 real seconds = 30 simulated seconds
+      const idx = Math.floor(realSeconds / 3);
+      if (idx < simulatedDO.length) {
+        const simTime = idx * 30;
+        const do_val = simulatedDO[idx];
+        recordPoint(simTime, do_val);
+      } else {
+        stopKinetics();
+      }
+    }
+  }, 1000);
+}
+
+function recordPoint(simTime, do_val) {
+  kineticsData.times.push(simTime);
+  kineticsData.dos.push(do_val);
+
+  // Update dot
+  const dotIdx = simTime / 30;
+  const prevDot = document.getElementById(`dot-${dotIdx - 1}`);
+  const curDot = document.getElementById(`dot-${dotIdx}`);
+  if (prevDot) { prevDot.classList.remove('current'); prevDot.classList.add('recorded'); }
+  if (curDot) curDot.classList.add('current');
+
+  // Update DO display
+  document.getElementById('live-do').textContent = do_val.toFixed(3);
+
+  // Update cuvette color (more brown as DO increases)
+  const intensity = Math.min(do_val / 0.45, 1);
+  const r = Math.round(150 + intensity * 80);
+  const g = Math.round(220 - intensity * 120);
+  const b = Math.round(150 - intensity * 120);
+  document.getElementById('live-liquid').style.background = `rgba(${r},${g},${b},${0.2 + intensity * 0.5})`;
+  document.getElementById('live-liquid').style.height = '75%';
+
+  // Add table row
+  const tbody = document.getElementById('kinetics-tbody');
+  const prev_do = kineticsData.dos.length > 1 ? kineticsData.dos[kineticsData.dos.length - 2] : 0;
+  const delta = (do_val - prev_do).toFixed(3);
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td>${simTime}</td>
+    <td>${(simTime/60).toFixed(1)}</td>
+    <td style="color:var(--accent); font-weight:600">${do_val.toFixed(3)}</td>
+    <td style="color:${parseFloat(delta) > 0 ? 'var(--yellow)' : 'var(--muted)'}">${delta > 0 ? '+' : ''}${delta}</td>
+  `;
+  tbody.appendChild(row);
+  tbody.scrollTop = tbody.scrollHeight;
+
+  drawKineticsChart();
+
+  // Show analysis after enough points
+  if (kineticsData.times.length >= 5) {
+    document.getElementById('kinetics-analysis').style.display = 'block';
+    const vi = ((kineticsData.dos[4] - kineticsData.dos[0]) / (kineticsData.times[4] / 60)).toFixed(3);
+    document.getElementById('vi-val').textContent = vi;
+    document.getElementById('do-max-val').textContent = do_val.toFixed(3);
+  }
+}
+
+function pauseKinetics() {
+  isPaused = true;
+  clearInterval(realTimer);
+  document.getElementById('start-btn').disabled = false;
+  document.getElementById('start-btn').textContent = '▶ Reprendre';
+  document.getElementById('pause-btn').disabled = true;
+}
+
+function stopKinetics() {
+  clearInterval(realTimer);
+  isRunning = false;
+  document.getElementById('start-btn').disabled = false;
+  document.getElementById('start-btn').textContent = '▶ Démarrer';
+  document.getElementById('pause-btn').disabled = true;
+
+  // Mark last dot
+  const last = document.querySelector('.time-dot.current');
+  if (last) { last.classList.remove('current'); last.classList.add('recorded'); }
+}
+
+function resetKinetics() {
+  clearInterval(realTimer);
+  isRunning = false;
+  isPaused = false;
+  realSeconds = 0;
+  kineticsData = { times: [], dos: [] };
+  document.getElementById('timer').textContent = '00:00';
+  document.getElementById('live-do').textContent = '0.000';
+  document.getElementById('live-liquid').style.background = 'rgba(150,220,150,0.2)';
+  document.getElementById('kinetics-tbody').innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--muted); padding:20px">Démarrez l\'expérience...</td></tr>';
+  document.getElementById('start-btn').disabled = false;
+  document.getElementById('start-btn').textContent = '▶ Démarrer';
+  document.getElementById('pause-btn').disabled = true;
+  document.getElementById('kinetics-analysis').style.display = 'none';
+  initTimeline();
+  drawKineticsChart();
+}
+
+// ============ CHART DRAWING ============
+let kineticsChart = null;
+
+function drawKineticsChart() {
+  const canvas = document.getElementById('kineticsChart');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth || 500;
+  canvas.height = 300;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const W = canvas.width, H = canvas.height;
+  const pad = { top: 30, right: 20, bottom: 50, left: 60 };
+  const chartW = W - pad.left - pad.right;
+  const chartH = H - pad.top - pad.bottom;
+
+  // Background
+  ctx.fillStyle = '#0d1a2a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(42,58,82,0.8)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 5; i++) {
+    const y = pad.top + (chartH / 5) * i;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + chartW, y); ctx.stroke();
+    const val = (0.5 - i * 0.1).toFixed(1);
+    ctx.fillStyle = '#6b7a99';
+    ctx.font = '11px JetBrains Mono';
+    ctx.textAlign = 'right';
+    ctx.fillText(val, pad.left - 8, y + 4);
+  }
+  for (let i = 0; i <= 10; i++) {
+    const x = pad.left + (chartW / 10) * i;
+    ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + chartH); ctx.stroke();
+    ctx.fillStyle = '#6b7a99';
+    ctx.font = '11px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText((i * 60) + 's', x, H - 10);
+  }
+
+  // Axes
+  ctx.strokeStyle = '#2a3a52';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(pad.left, pad.top);
+  ctx.lineTo(pad.left, pad.top + chartH);
+  ctx.lineTo(pad.left + chartW, pad.top + chartH);
+  ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle = '#6b7a99';
+  ctx.font = '12px Syne';
+  ctx.textAlign = 'center';
+  ctx.fillText('Temps (secondes)', pad.left + chartW / 2, H - 2);
+
+  ctx.save();
+  ctx.translate(14, pad.top + chartH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('Absorbance (DO)', 0, 0);
+  ctx.restore();
+
+  if (kineticsData.times.length < 2) return;
+
+  const maxTime = 600;
+  const maxDO = 0.5;
+
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + chartH);
+  grad.addColorStop(0, 'rgba(0,212,170,0.3)');
+  grad.addColorStop(1, 'rgba(0,212,170,0.02)');
+
+  ctx.beginPath();
+  kineticsData.times.forEach((t, i) => {
+    const x = pad.left + (t / maxTime) * chartW;
+    const y = pad.top + chartH - (kineticsData.dos[i] / maxDO) * chartH;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  const lastX = pad.left + (kineticsData.times[kineticsData.times.length - 1] / maxTime) * chartW;
+  ctx.lineTo(lastX, pad.top + chartH);
+  ctx.lineTo(pad.left, pad.top + chartH);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  ctx.strokeStyle = '#00d4aa';
+  ctx.lineWidth = 3;
+  ctx.lineJoin = 'round';
+  kineticsData.times.forEach((t, i) => {
+    const x = pad.left + (t / maxTime) * chartW;
+    const y = pad.top + chartH - (kineticsData.dos[i] / maxDO) * chartH;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Points
+  kineticsData.times.forEach((t, i) => {
+    const x = pad.left + (t / maxTime) * chartW;
+    const y = pad.top + chartH - (kineticsData.dos[i] / maxDO) * chartH;
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#00d4aa';
+    ctx.fill();
+    ctx.strokeStyle = '#0a0e14';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
+
+  // Vi tangent line
+  if (kineticsData.times.length >= 5) {
+    const vi = (kineticsData.dos[4] - kineticsData.dos[0]) / (kineticsData.times[4] / maxTime);
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(255,209,102,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 5]);
+    const x0 = pad.left;
+    const y0 = pad.top + chartH;
+    const x1 = pad.left + 0.3 * chartW;
+    const y1 = pad.top + chartH - vi * 0.3 * chartH;
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ffd166';
+    ctx.font = 'bold 11px JetBrains Mono';
+    ctx.textAlign = 'left';
+    ctx.fillText('← Vi (pente initiale)', x1 + 4, y1 - 4);
+  }
+}
+
+// ============ pH SIMULATION ============
+const phData = {
+  4: { do: 0.052, label: 'Très acide', obs: 'Site actif protonné, faible activité' },
+  5: { do: 0.124, label: 'Légèrement acide', obs: 'Activité partielle' },
+  6: { do: 0.312, label: 'Optimal', obs: 'Activité maximale, conformation idéale' },
+  7: { do: 0.278, label: 'Neutre', obs: 'Bonne activité, légèrement moindre' },
+  8: { do: 0.089, label: 'Basique', obs: 'Dénaturation partielle, faible activité' }
+};
+const maxPHdo = 0.312;
+let selectedPH = 6;
+let testedPHs = new Set();
+
+const phInfoText = {
+  4: { t: 'pH 4 — Très acide', d: 'Protonation des acides aminés du site actif → conformation perturbée → très faible activité.' },
+  5: { t: 'pH 5 — Légèrement acide', d: 'Activité partielle. Le site actif n\'est pas encore optimal.' },
+  6: { t: 'pH 6 — Optimal', d: 'Zone optimale pour la peroxydase du navet. Conformation idéale, activité maximale.' },
+  7: { t: 'pH 7 — Neutre', d: 'Bonne activité, légèrement inférieure au pH 6. Encore dans la zone fonctionnelle.' },
+  8: { t: 'pH 8 — Basique', d: 'Déprotonation des acides aminés → dénaturation partielle → faible activité enzymatique.' }
+};
+
+function selectPH(ph) {
+  selectedPH = ph;
+  document.querySelectorAll('.ph-btn').forEach(b => b.classList.remove('selected'));
+  event.target.classList.add('selected');
+  document.getElementById('ph-display').textContent = ph;
+  const info = phInfoText[ph];
+  document.getElementById('ph-info').innerHTML = `<strong>${info.t}</strong><br>${info.d}`;
+}
+
+function runPHTest() {
+  const ph = selectedPH;
+  testedPHs.add(ph);
+  const data = phData[ph];
+  const pct = (data.do / maxPHdo * 90).toFixed(0);
+
+  const bar = document.getElementById(`bar-${ph}`);
+  const val = document.getElementById(`val-${ph}`);
+  bar.style.height = pct + '%';
+  val.textContent = data.do.toFixed(3);
+
+  updatePHTable();
+
+  if (testedPHs.size >= 3) {
+    document.getElementById('ph-optimum-box').style.display = 'block';
+  }
+}
+
+function runAllPH() {
+  let delay = 0;
+  [4, 5, 6, 7, 8].forEach(ph => {
+    setTimeout(() => {
+      testedPHs.add(ph);
+      const data = phData[ph];
+      const pct = (data.do / maxPHdo * 90).toFixed(0);
+      document.getElementById(`bar-${ph}`).style.height = pct + '%';
+      document.getElementById(`val-${ph}`).textContent = data.do.toFixed(3);
+
+      // Update all ph buttons
+      document.querySelectorAll('.ph-btn').forEach((b, i) => {
+        if ([4,5,6,7,8][i] === ph) b.classList.add('selected');
+      });
+    }, delay);
+    delay += 500;
+  });
+
+  setTimeout(() => {
+    updatePHTable();
+    document.getElementById('ph-optimum-box').style.display = 'block';
+  }, 3000);
+}
+
+function updatePHTable() {
+  const tbody = document.getElementById('ph-tbody');
+  tbody.innerHTML = '';
+
+  const milieus = { 4: 'Acide fort', 5: 'Acide faible', 6: 'Légèrement acide', 7: 'Neutre', 8: 'Basique' };
+  const activities = { 4: '17%', 5: '40%', 6: '100%', 7: '89%', 8: '29%' };
+  const colors = { 4: 'var(--accent2)', 5: 'var(--yellow)', 6: 'var(--accent)', 7: '#60a5fa', 8: 'var(--accent3)' };
+
+  testedPHs.forEach(ph => {
+    const data = phData[ph];
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td style="font-weight:700; color:${colors[ph]}">${ph}</td>
+      <td style="color:var(--muted)">${milieus[ph]}</td>
+      <td style="font-family:'JetBrains Mono',monospace; color:var(--text)">${data.do.toFixed(3)}</td>
+      <td>
+        <div style="display:flex; align-items:center; gap:8px">
+          <div style="height:8px; width:${activities[ph]}; background:${colors[ph]}; border-radius:4px; min-width:4px"></div>
+          <span style="font-size:12px; color:${colors[ph]}">${activities[ph]}</span>
+        </div>
+      </td>
+      <td style="font-size:12px; color:var(--muted)">${data.obs}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+// ============ FINAL CHART ============
+function drawFinalChart() {
+  const canvas = document.getElementById('finalChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth || 500;
+  canvas.height = 250;
+
+  const allTimes = Array.from({ length: 21 }, (_, i) => i * 30);
+  const allDOs = simulatedDO;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const W = canvas.width, H = canvas.height;
+  const pad = { top: 20, right: 20, bottom: 40, left: 55 };
+  const chartW = W - pad.left - pad.right;
+  const chartH = H - pad.top - pad.bottom;
+
+  ctx.fillStyle = '#0d1a2a';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = 'rgba(42,58,82,0.8)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 5; i++) {
+    const y = pad.top + (chartH / 5) * i;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + chartW, y); ctx.stroke();
+    ctx.fillStyle = '#6b7a99'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'right';
+    ctx.fillText((0.5 - i * 0.1).toFixed(1), pad.left - 6, y + 3);
+  }
+
+  const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + chartH);
+  grad.addColorStop(0, 'rgba(0,212,170,0.3)');
+  grad.addColorStop(1, 'rgba(0,212,170,0.02)');
+
+  ctx.beginPath();
+  allTimes.forEach((t, i) => {
+    const x = pad.left + (t / 600) * chartW;
+    const y = pad.top + chartH - (allDOs[i] / 0.5) * chartH;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  const lastX = pad.left + (allTimes[allTimes.length - 1] / 600) * chartW;
+  ctx.lineTo(lastX, pad.top + chartH);
+  ctx.lineTo(pad.left, pad.top + chartH);
+  ctx.fillStyle = grad; ctx.fill();
+
+  ctx.beginPath();
+  ctx.strokeStyle = '#00d4aa'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+  allTimes.forEach((t, i) => {
+    const x = pad.left + (t / 600) * chartW;
+    const y = pad.top + chartH - (allDOs[i] / 0.5) * chartH;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Annotations
+  ctx.fillStyle = 'rgba(255,209,102,0.8)';
+  ctx.font = 'bold 10px Syne';
+  ctx.textAlign = 'left';
+  const x1ann = pad.left + (90 / 600) * chartW;
+  ctx.fillText('Phase linéaire (Vi)', x1ann, pad.top + 15);
+
+  const x2ann = pad.left + (270 / 600) * chartW;
+  ctx.fillStyle = 'rgba(255,107,53,0.8)';
+  ctx.fillText('Ralentissement', x2ann, pad.top + 35);
+
+  const x3ann = pad.left + (480 / 600) * chartW;
+  ctx.fillStyle = 'rgba(0,212,170,0.8)';
+  ctx.fillText('Plateau', x3ann, pad.top + 55);
+
+  ctx.fillStyle = '#6b7a99'; ctx.font = '11px Syne';
+  ctx.textAlign = 'center';
+  ctx.fillText('Temps (s)', pad.left + chartW / 2, H - 5);
+}
+
+// ============ INIT ============
+window.onload = () => {
+  initTimeline();
+  drawKineticsChart();
+
+  // Handle resize
+  window.addEventListener('resize', () => {
+    drawKineticsChart();
+    if (document.getElementById('resultats').classList.contains('active')) drawFinalChart();
+  });
+};
+</script>
+</body>
+</html>
